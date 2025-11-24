@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurador v15 - Final con Rotación Z</title>
+    <style>
+        /* ESTILOS GENERALES */
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; background: #000; }
+        
+        #ui-panel, #edit-panel, #env-panel {
+            background: rgba(30, 30, 30, 0.90); 
+            backdrop-filter: blur(10px);        
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        #ui-panel { position: absolute; top: 20px; left: 20px; width: 300px; max-height: 90vh; overflow-y: auto; z-index: 10; }
+        
+        .accordion-btn {
+            background-color: #444; color: #fff; cursor: pointer; padding: 12px; width: 100%; border: 1px solid #555;
+            text-align: left; outline: none; font-size: 13px; margin-top: 5px; border-radius: 4px; display: flex; justify-content: space-between;
+        }
+        .accordion-btn:hover { background-color: #555; }
+        .accordion-btn:after { content: '+'; font-weight: bold; }
+        .accordion-btn.active-acc:after { content: "-"; }
+
+        .panel-products {
+            padding: 0 5px; background-color: rgba(0,0,0,0.3); max-height: 0; overflow: hidden;
+            transition: max-height 0.2s ease-out; margin-bottom: 5px;
+        }
+
+        .line-selector {
+            width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #4a90e2; 
+            border-radius: 6px; margin-bottom: 15px; font-size: 14px; cursor: pointer;
+        }
+
+        .btn-product {
+            display: block; width: 100%; padding: 10px; margin: 5px 0; border: 1px solid rgba(255,255,255,0.1); 
+            background: rgba(255,255,255,0.05); cursor: pointer; text-align: left; border-radius: 4px; color: #ccc; font-size: 12px;
+        }
+        .btn-product:hover { background: #4a90e2; color: white; }
+        .btn-product.active { background: #4a90e2; border-color: #fff; color: white; font-weight: bold; }
+
+        h1 { font-size: 18px; margin-top: 0; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        h2 { font-size: 14px; margin: 15px 0 5px 0; color: #aaa; text-transform: uppercase; }
+        button { font-family: inherit; transition: all 0.2s; outline: none; }
+        .views-container { display: flex; gap: 5px; margin-bottom: 15px; }
+        .btn-view { flex: 1; padding: 6px; font-size: 11px; cursor: pointer; background: #333; border: 1px solid #555; color: #ddd; border-radius: 4px; }
+        .projection-toggle { width: 100%; margin-bottom: 15px; padding: 10px; cursor: pointer; background: #4a90e2; color: white; border: none; border-radius: 6px; }
+        
+        #edit-panel { display: none; position: absolute; top: 20px; right: 20px; width: 220px; z-index: 10; }
+        #env-panel { display: none; position: absolute; bottom: 20px; left: 20px; width: 280px; z-index: 10; }
+        #btn-toggle-env { position: absolute; bottom: 20px; left: 20px; background: #333; color: white; padding: 10px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        
+        .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .btn-mini { flex: 1; margin: 0 2px; padding: 6px; cursor: pointer; border: none; background: #444; color: #ccc; border-radius: 4px; font-size: 11px; }
+        .btn-action { width: 100%; padding: 10px; cursor: pointer; border: none; background: #444; color: white; border-radius: 6px; margin-top:5px; }
+        .btn-delete { background: #d9534f; }
+        .status-btn { font-weight: bold; margin-bottom: 8px; border: none; width: 100%; padding: 10px; cursor: pointer; border-radius: 6px; }
+        #btn-lock { background: #555; } #btn-lock.is-locked { background: #d9534f; }
+        #btn-collision { background: #28a745; } #btn-collision.is-inactive { background: #555; }
+        
+        #budget-box { margin-top: 20px; border-top: 1px solid #555; padding-top: 15px; font-size: 24px; font-weight: bold; color: #4cd137; text-align: right; }
+        #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; }
+        .bg-options { display: flex; gap: 5px; margin-bottom: 10px; }
+        .bg-btn { flex: 1; height: 30px; border-radius: 4px; border: 1px solid #555; cursor: pointer; }
+        .bg-day { background: #87CEEB; } .bg-sunset { background: linear-gradient(to bottom, #fd7e14, #4a148c); } .bg-night { background: #1a1a1a; } .bg-white { background: #ffffff; border: 2px solid #ccc; }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="loading">📦 Cargando...</div>
+    <div id="btn-toggle-env">☀</div> 
+
+    <!-- AMBIENTE -->
+    <div id="env-panel">
+        <h1>Ambiente</h1>
+        <div class="bg-options">
+            <button class="bg-btn bg-day" id="bg-day"></button>
+            <button class="bg-btn bg-sunset" id="bg-sunset"></button>
+            <button class="bg-btn bg-night" id="bg-night"></button>
+            <button class="bg-btn bg-white" id="bg-white"></button>
+        </div>
+        <p style="font-size:11px; margin-bottom:5px">Sol (Rot/Alt)</p>
+        <input type="range" min="0" max="360" value="45" id="sun-azimuth">
+        <input type="range" min="0" max="90" value="45" id="sun-elevation">
+        <p style="font-size:11px; margin-bottom:5px">Intensidad</p>
+        <input type="range" min="0" max="3" step="0.1" value="1.5" id="light-intensity">
+    </div>
+
+    <!-- PANEL PRINCIPAL -->
+    <div id="ui-panel">
+        <h1>LEVIPARK21 3D</h1>
+        
+        <button class="projection-toggle" id="btn-projection">👁️ Perspectiva</button>
+        <div class="views-container">
+            <button class="btn-view" id="view-iso">📦 Iso</button>
+            <button class="btn-view" id="view-top">📐 Planta</button>
+            <button class="btn-view" id="view-front">📏 Alzado</button>
+        </div>
+
+        <h2>Catálogo</h2>
+        <select id="line-select" class="line-selector"></select>
+        <div id="dynamic-catalog"></div>
+
+        <div id="budget-box">0 €</div>
+        <button id="btn-reset" style="margin-top:20px; width:100%; padding:10px; background:#444; color:#ccc; border:none; border-radius:6px; cursor:pointer;">❌ Borrar Todo</button>
+    </div>
+
+    <!-- PANEL EDICIÓN -->
+    <div id="edit-panel">
+        <h1>Editar</h1>
+        <button id="btn-lock" class="status-btn">🔓 Fijar</button>
+        <button id="btn-collision" class="status-btn edit-control">💥 Colisión: ON</button>
+
+        <h2>Rotación</h2>
+        <div class="control-row">
+            <span style="color:#4cd137; font-weight:bold;">Y</span>
+            <button class="btn-mini edit-control" id="rot-y-n">⟲</button>
+            <button class="btn-mini edit-control" id="rot-y-p">⟳</button>
+        </div>
+        <div class="control-row">
+            <span style="color:#e84118; font-weight:bold;">X</span>
+            <button class="btn-mini edit-control" id="rot-x-n">▼</button>
+            <button class="btn-mini edit-control" id="rot-x-p">▲</button>
+        </div>
+        <!-- AQUÍ ESTÁ LA ROTACIÓN Z RESTAURADA -->
+        <div class="control-row">
+            <span style="color:#0097e6; font-weight:bold;">Z</span>
+            <button class="btn-mini edit-control" id="rot-z-n">◀</button>
+            <button class="btn-mini edit-control" id="rot-z-p">▶</button>
+        </div>
+        <button class="btn-action edit-control" id="reset-rot">↺ Reset</button>
+
+        <h2>Posición</h2>
+        <div class="control-row">
+            <button class="btn-mini edit-control" id="move-down">⬇</button>
+            <button class="btn-mini edit-control" id="move-up">⬆</button>
+        </div>
+        <button class="btn-action edit-control" id="reset-height">⭱ Suelo</button>
+        <button class="btn-action btn-delete edit-control" id="btn-delete">🗑️ Eliminar</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // ======================================================================
+        // 1. TU BASE DE DATOS
+        // ======================================================================
+        const productsDB = {
+            "Línea Clásica": {
+                "Torres": [
+                    { name: "Torre Pequeña", file: "tobogan.glb", price: 2500 },
+                    { name: "Castillo", file: "tobogan.glb", price: 5000 }
+                ],
+                "Columpios": [
+                    { name: "Columpio Doble", file: "columpio.glb", price: 1200 }
+                ],
+                "Muelles": [
+                    { name: "Muelle Caballo", file: "muelle.glb", price: 450 }
+                ]
+            },
+            "Línea Futura": {
+                "Estructuras": [
+                    { name: "Cubo Escalada", file: "tobogan.glb", price: 6000 },
+                    { name: "Red Araña", file: "columpio.glb", price: 3000 }
+                ]
+            },
+            "Mobiliario": {
+                "Bancos": [
+                    { name: "Banco Madera", file: "banco.glb", price: 300 }
+                ]
+            }
+        };
+
+        let scene, renderer, controls;
+        let perspectiveCamera, orthoCamera, activeCamera; 
+        let plane, raycaster, pointer, gridHelper;
+        let dirLight, hemiLight;
+        let sunAzimuth = 45, sunElevation = 45;
+
+        let productToPlace = null, productPrice = 0;      
+        let selectedObject = null, isDragging = false; 
+        let totalPrice = 0;
+        let dragStartPosition = new THREE.Vector3(); 
+        let isColliding = false; 
+
+        const objectsInScene = []; 
+        let selectionBox; 
+        const loader = new GLTFLoader();
+
+        init();
+        initCatalog(); 
+        setupEventListeners(); 
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+
+            perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+            perspectiveCamera.position.set(15, 15, 15);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 20; 
+            orthoCamera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            orthoCamera.position.set(20, 20, 20); 
+
+            activeCamera = perspectiveCamera;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+            renderer.outputColorSpace = THREE.SRGBColorSpace; 
+            document.body.appendChild(renderer.domElement);
+
+            hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+            scene.add(hemiLight);
+
+            dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+            updateSunPosition();
+
+            const geometry = new THREE.PlaneGeometry(100, 100);
+            const material = new THREE.MeshStandardMaterial({ color: 0x55aa55, roughness: 0.8 });
+            plane = new THREE.Mesh(geometry, material);
+            plane.rotation.x = -Math.PI / 2;
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            gridHelper = new THREE.GridHelper(100, 100, 0xffffff, 0xcccccc);
+            scene.add(gridHelper);
+
+            selectionBox = new THREE.BoxHelper(undefined, 0xffff00);
+            scene.add(selectionBox);
+            selectionBox.visible = false;
+
+            controls = new OrbitControls(activeCamera, renderer.domElement);
+            controls.enableDamping = true; 
+            
+            raycaster = new THREE.Raycaster();
+            pointer = new THREE.Vector2();
+            
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function initCatalog() {
+            const select = document.getElementById('line-select');
+            select.innerHTML = "";
+            const lines = Object.keys(productsDB);
+            if (lines.length === 0) return;
+            lines.forEach(line => {
+                const option = document.createElement('option');
+                option.value = line; option.innerText = line; select.appendChild(option);
+            });
+            select.addEventListener('change', (e) => renderCategories(e.target.value));
+            renderCategories(lines[0]);
+        }
+
+        function renderCategories(lineName) {
+            const container = document.getElementById('dynamic-catalog');
+            container.innerHTML = ""; 
+            if (!productsDB[lineName]) return;
+            const categories = productsDB[lineName];
+
+            for (const [categoryName, products] of Object.entries(categories)) {
+                const accBtn = document.createElement('button');
+                accBtn.className = "accordion-btn";
+                accBtn.innerText = categoryName;
+                
+                const panel = document.createElement('div');
+                panel.className = "panel-products";
+
+                if (Array.isArray(products)) {
+                    products.forEach(prod => {
+                        const btn = document.createElement('button');
+                        btn.className = "btn-product";
+                        btn.innerHTML = `${prod.name} <span style="float:right; opacity:0.7">${prod.price}€</span>`;
+                        btn.addEventListener('click', function() { prepareToPlace(prod.file, prod.price, this); });
+                        panel.appendChild(btn);
+                    });
+                }
+                accBtn.addEventListener("click", function() {
+                    this.classList.toggle("active-acc");
+                    if (panel.style.maxHeight) panel.style.maxHeight = null; else panel.style.maxHeight = panel.scrollHeight + "px";
+                });
+                container.appendChild(accBtn); container.appendChild(panel);
+            }
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+            window.addEventListener('keydown', onKeyDown);
+
+            document.getElementById('btn-toggle-env').addEventListener('click', () => {
+                const p = document.getElementById('env-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
+            });
+            document.getElementById('bg-day').addEventListener('click', () => setSky('day'));
+            document.getElementById('bg-sunset').addEventListener('click', () => setSky('sunset'));
+            document.getElementById('bg-night').addEventListener('click', () => setSky('night'));
+            document.getElementById('bg-white').addEventListener('click', () => setSky('white'));
+            
+            document.getElementById('sun-azimuth').addEventListener('input', (e) => updateSun(e.target.value, 'azimuth'));
+            document.getElementById('sun-elevation').addEventListener('input', (e) => updateSun(e.target.value, 'elevation'));
+            document.getElementById('light-intensity').addEventListener('input', (e) => { dirLight.intensity = parseFloat(e.target.value); });
+
+            document.getElementById('btn-projection').addEventListener('click', toggleProjection);
+            document.getElementById('view-iso').addEventListener('click', () => setView('iso'));
+            document.getElementById('view-top').addEventListener('click', () => setView('top'));
+            document.getElementById('view-front').addEventListener('click', () => setView('front'));
+            document.getElementById('btn-reset').addEventListener('click', resetScene);
+
+            document.getElementById('btn-lock').addEventListener('click', toggleLock);
+            document.getElementById('btn-collision').addEventListener('click', toggleObjectCollision);
+            
+            // BOTONES DE ROTACIÓN Y POSICIÓN
+            document.getElementById('rot-y-n').addEventListener('click', () => rotateSelected('y', -45));
+            document.getElementById('rot-y-p').addEventListener('click', () => rotateSelected('y', 45));
+            document.getElementById('rot-x-n').addEventListener('click', () => rotateSelected('x', -15));
+            document.getElementById('rot-x-p').addEventListener('click', () => rotateSelected('x', 15));
+            
+            // --- NUEVOS LISTENERS PARA Z ---
+            document.getElementById('rot-z-n').addEventListener('click', () => rotateSelected('z', -15));
+            document.getElementById('rot-z-p').addEventListener('click', () => rotateSelected('z', 15));
+            // -----------------------------
+            
+            document.getElementById('reset-rot').addEventListener('click', resetRotation);
+            document.getElementById('move-down').addEventListener('click', () => moveVertical(-0.1));
+            document.getElementById('move-up').addEventListener('click', () => moveVertical(0.1));
+            document.getElementById('reset-height').addEventListener('click', resetHeight);
+            document.getElementById('btn-delete').addEventListener('click', deleteSelected);
+        }
+
+        function setSky(type) {
+            let color, fogColor, groundColor, showGrid = true;
+            if (type === 'day') { color=0x87CEEB; fogColor=0x87CEEB; groundColor=0x55aa55; dirLight.color.setHex(0xffffff); }
+            else if (type === 'sunset') { color=0xff9966; fogColor=0xff9966; groundColor=0x6b4f3b; dirLight.color.setHex(0xffaa00); }
+            else if (type === 'night') { color=0x111111; fogColor=0x111111; groundColor=0x223322; dirLight.color.setHex(0xaaccff); }
+            else if (type === 'white') { color=0xffffff; fogColor=0xffffff; groundColor=0xffffff; dirLight.color.setHex(0xffffff); showGrid=false; }
+            scene.background = new THREE.Color(color); scene.fog.color.setHex(fogColor);
+            plane.material.color.setHex(groundColor); gridHelper.visible = showGrid;
+        }
+
+        function updateSun(val, type) {
+            if (type === 'azimuth') sunAzimuth = val; if (type === 'elevation') sunElevation = val;
+            updateSunPosition();
+        }
+        function updateSunPosition() {
+            const phi = (90 - sunElevation) * (Math.PI / 180); const theta = sunAzimuth * (Math.PI / 180);
+            dirLight.position.setFromSphericalCoords(50, phi, theta);
+        }
+
+        function prepareToPlace(file, price, btn) {
+            if (productToPlace === file) { productToPlace = null; document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active')); return; }
+            deselectObject(); productToPlace = file; productPrice = price;
+            document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+        }
+
+        function onPointerDown(event) {
+            if (event.target.closest('#ui-panel') || event.target.closest('#edit-panel') || event.target.closest('#env-panel')) return;
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, activeCamera); 
+            if (productToPlace) {
+                const intersects = raycaster.intersectObject(plane);
+                if (intersects.length > 0) placeObject(intersects[0].point);
+                return;
+            }
+            const intersectsObjects = raycaster.intersectObjects(objectsInScene, true);
+            if (intersectsObjects.length > 0) {
+                let selected = intersectsObjects[0].object;
+                while (selected.parent && !objectsInScene.includes(selected)) selected = selected.parent;
+                if (objectsInScene.includes(selected)) {
+                    selectObject(selected);
+                    if (!selected.userData.locked) {
+                        isDragging = true; controls.enabled = false; document.body.style.cursor = 'grabbing';
+                        dragStartPosition.copy(selected.position);
+                    }
+                }
+            } else { deselectObject(); }
+        }
+
+        function placeObject(pos) {
+            document.getElementById('loading').style.display = 'block';
+            loader.load(productToPlace, (gltf) => {
+                const model = gltf.scene;
+                model.traverse(n => { if(n.isMesh) { n.castShadow=true; n.receiveShadow=true; } });
+                model.position.set(pos.x, 0, pos.z);
+                model.userData = { price: productPrice, locked: false, collides: true };
+                scene.add(model); objectsInScene.push(model); totalPrice += productPrice; updateBudget();
+                selectObject(model); document.getElementById('loading').style.display = 'none';
+                productToPlace = null; document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active'));
+            }, undefined, (err) => { console.error(err); alert("Error cargando modelo"); document.getElementById('loading').style.display = 'none'; });
+        }
+
+        function onPointerMove(event) {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, activeCamera); 
+            if (isDragging && selectedObject && !selectedObject.userData.locked) {
+                const intersects = raycaster.intersectObject(plane);
+                if (intersects.length > 0) {
+                    selectedObject.position.x = intersects[0].point.x; selectedObject.position.z = intersects[0].point.z;
+                    selectionBox.update(); checkCollisions();
+                }
+            }
+        }
+        function onPointerUp() {
+            if (isDragging) {
+                if (isColliding && selectedObject.userData.collides) {
+                    selectedObject.position.copy(dragStartPosition); selectionBox.update(); isColliding = false; checkCollisions();
+                }
+                isDragging = false; controls.enabled = true; document.body.style.cursor = 'default';
+            }
+        }
+
+        function selectObject(obj) {
+            selectedObject = obj; selectionBox.setFromObject(obj); selectionBox.visible = true;
+            document.getElementById('edit-panel').style.display = 'block'; updateUI();
+        }
+        function deselectObject() { selectedObject = null; selectionBox.visible = false; document.getElementById('edit-panel').style.display = 'none'; }
+        
+        function updateUI() {
+            if (!selectedObject) return;
+            const btnLock = document.getElementById('btn-lock'); const btnCol = document.getElementById('btn-collision');
+            if (selectedObject.userData.locked) { btnLock.innerText = "🔒 Desbloquear"; btnLock.classList.add('is-locked'); selectionBox.material.color.setHex(0xff4444); } 
+            else { btnLock.innerText = "🔓 Fijar"; btnLock.classList.remove('is-locked'); selectionBox.material.color.setHex(0xffff00); }
+            if (selectedObject.userData.collides) { btnCol.innerText = "💥 Colisión: ON"; btnCol.classList.remove('is-inactive'); } 
+            else { btnCol.innerText = "👻 Fantasma"; btnCol.classList.add('is-inactive'); }
+        }
+        function toggleLock() { if(selectedObject) { selectedObject.userData.locked = !selectedObject.userData.locked; updateUI(); } }
+        function toggleObjectCollision() { if(selectedObject) { selectedObject.userData.collides = !selectedObject.userData.collides; updateUI(); } }
+
+        function checkCollisions() {
+            if (!selectedObject || !selectedObject.userData.collides) { isColliding=false; return; }
+            const box = new THREE.Box3().setFromObject(selectedObject).expandByScalar(-0.1); let hit = false;
+            for (let other of objectsInScene) {
+                if (other !== selectedObject && other.userData.collides) {
+                    if (box.intersectsBox(new THREE.Box3().setFromObject(other).expandByScalar(-0.1))) { hit = true; break; }
+                }
+            }
+            isColliding = hit; selectionBox.material.color.setHex(isColliding ? 0xffa500 : 0xffff00);
+            if (!isColliding) updateUI();
+        }
+
+        function rotateSelected(axis, deg) { if(!selectedObject || selectedObject.userData.locked) return; selectedObject.rotation[axis] += deg * (Math.PI/180); selectionBox.update(); checkCollisions(); }
+        function resetRotation() { if(!selectedObject || selectedObject.userData.locked) return; selectedObject.rotation.set(0,0,0); selectionBox.update(); }
+        function moveVertical(amount) { if(!selectedObject || selectedObject.userData.locked) return; selectedObject.position.y += amount; selectionBox.update(); }
+        function resetHeight() { if(!selectedObject || selectedObject.userData.locked) return; selectedObject.position.y = 0; selectionBox.update(); }
+        function deleteSelected() { 
+            if(!selectedObject || selectedObject.userData.locked) return; 
+            scene.remove(selectedObject); objectsInScene.splice(objectsInScene.indexOf(selectedObject), 1);
+            totalPrice -= selectedObject.userData.price; updateBudget(); deselectObject();
+        }
+        function resetScene() { objectsInScene.forEach(o => scene.remove(o)); objectsInScene.length=0; totalPrice=0; updateBudget(); deselectObject(); }
+        function updateBudget() { document.getElementById('budget-box').innerText = totalPrice.toLocaleString('es-ES') + " €"; }
+        function toggleProjection() {
+            const btn = document.getElementById('btn-projection'); const prevPos = activeCamera.position.clone(); const prevTarget = controls.target.clone();
+            if (activeCamera === perspectiveCamera) { activeCamera = orthoCamera; btn.innerText = "📐 Ortográfica"; btn.style.background = "#555"; } 
+            else { activeCamera = perspectiveCamera; btn.innerText = "👁️ Perspectiva"; btn.style.background = "#4a90e2"; }
+            activeCamera.position.copy(prevPos); activeCamera.lookAt(prevTarget); controls.object = activeCamera; controls.update();
+        }
+        function setView(type) {
+            controls.target.set(0,0,0);
+            if(type==='iso') activeCamera.position.set(15,15,15); if(type==='top') activeCamera.position.set(0,20,0); if(type==='front') activeCamera.position.set(0,0,20);
+            activeCamera.lookAt(0,0,0); controls.update();
+        }
+        function onKeyDown(e) { if(e.key === 'Delete') deleteSelected(); }
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight; perspectiveCamera.aspect = aspect; perspectiveCamera.updateProjectionMatrix();
+            orthoCamera.left = -20 * aspect; orthoCamera.right = 20 * aspect; orthoCamera.top = 20; orthoCamera.bottom = -20; orthoCamera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, activeCamera); }
+    </script>
+</body>
+</html>
