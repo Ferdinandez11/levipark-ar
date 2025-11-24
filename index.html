@@ -1,166 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configurador v15 - Final con Rotación Z</title>
-    <style>
-        /* ESTILOS GENERALES */
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; background: #000; }
-        
-        #ui-panel, #edit-panel, #env-panel {
-            background: rgba(30, 30, 30, 0.90); 
-            backdrop-filter: blur(10px);        
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-        }
-
-        #ui-panel { position: absolute; top: 20px; left: 20px; width: 300px; max-height: 90vh; overflow-y: auto; z-index: 10; }
-        
-        .accordion-btn {
-            background-color: #444; color: #fff; cursor: pointer; padding: 12px; width: 100%; border: 1px solid #555;
-            text-align: left; outline: none; font-size: 13px; margin-top: 5px; border-radius: 4px; display: flex; justify-content: space-between;
-        }
-        .accordion-btn:hover { background-color: #555; }
-        .accordion-btn:after { content: '+'; font-weight: bold; }
-        .accordion-btn.active-acc:after { content: "-"; }
-
-        .panel-products {
-            padding: 0 5px; background-color: rgba(0,0,0,0.3); max-height: 0; overflow: hidden;
-            transition: max-height 0.2s ease-out; margin-bottom: 5px;
-        }
-
-        .line-selector {
-            width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #4a90e2; 
-            border-radius: 6px; margin-bottom: 15px; font-size: 14px; cursor: pointer;
-        }
-
-        .btn-product {
-            display: block; width: 100%; padding: 10px; margin: 5px 0; border: 1px solid rgba(255,255,255,0.1); 
-            background: rgba(255,255,255,0.05); cursor: pointer; text-align: left; border-radius: 4px; color: #ccc; font-size: 12px;
-        }
-        .btn-product:hover { background: #4a90e2; color: white; }
-        .btn-product.active { background: #4a90e2; border-color: #fff; color: white; font-weight: bold; }
-
-        h1 { font-size: 18px; margin-top: 0; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
-        h2 { font-size: 14px; margin: 15px 0 5px 0; color: #aaa; text-transform: uppercase; }
-        button { font-family: inherit; transition: all 0.2s; outline: none; }
-        .views-container { display: flex; gap: 5px; margin-bottom: 15px; }
-        .btn-view { flex: 1; padding: 6px; font-size: 11px; cursor: pointer; background: #333; border: 1px solid #555; color: #ddd; border-radius: 4px; }
-        .projection-toggle { width: 100%; margin-bottom: 15px; padding: 10px; cursor: pointer; background: #4a90e2; color: white; border: none; border-radius: 6px; }
-        
-        #edit-panel { display: none; position: absolute; top: 20px; right: 20px; width: 220px; z-index: 10; }
-        #env-panel { display: none; position: absolute; bottom: 20px; left: 20px; width: 280px; z-index: 10; }
-        #btn-toggle-env { position: absolute; bottom: 20px; left: 20px; background: #333; color: white; padding: 10px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        
-        .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
-        .btn-mini { flex: 1; margin: 0 2px; padding: 6px; cursor: pointer; border: none; background: #444; color: #ccc; border-radius: 4px; font-size: 11px; }
-        .btn-action { width: 100%; padding: 10px; cursor: pointer; border: none; background: #444; color: white; border-radius: 6px; margin-top:5px; }
-        .btn-delete { background: #d9534f; }
-        .status-btn { font-weight: bold; margin-bottom: 8px; border: none; width: 100%; padding: 10px; cursor: pointer; border-radius: 6px; }
-        #btn-lock { background: #555; } #btn-lock.is-locked { background: #d9534f; }
-        #btn-collision { background: #28a745; } #btn-collision.is-inactive { background: #555; }
-        
-        #budget-box { margin-top: 20px; border-top: 1px solid #555; padding-top: 15px; font-size: 24px; font-weight: bold; color: #4cd137; text-align: right; }
-        #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; }
-        .bg-options { display: flex; gap: 5px; margin-bottom: 10px; }
-        .bg-btn { flex: 1; height: 30px; border-radius: 4px; border: 1px solid #555; cursor: pointer; }
-        .bg-day { background: #87CEEB; } .bg-sunset { background: linear-gradient(to bottom, #fd7e14, #4a148c); } .bg-night { background: #1a1a1a; } .bg-white { background: #ffffff; border: 2px solid #ccc; }
-    </style>
-    
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-</head>
-<body>
-
-    <div id="loading">📦 Cargando...</div>
-    <div id="btn-toggle-env">☀</div> 
-
-    <!-- AMBIENTE -->
-    <div id="env-panel">
-        <h1>Ambiente</h1>
-        <div class="bg-options">
-            <button class="bg-btn bg-day" id="bg-day"></button>
-            <button class="bg-btn bg-sunset" id="bg-sunset"></button>
-            <button class="bg-btn bg-night" id="bg-night"></button>
-            <button class="bg-btn bg-white" id="bg-white"></button>
-        </div>
-        <p style="font-size:11px; margin-bottom:5px">Sol (Rot/Alt)</p>
-        <input type="range" min="0" max="360" value="45" id="sun-azimuth">
-        <input type="range" min="0" max="90" value="45" id="sun-elevation">
-        <p style="font-size:11px; margin-bottom:5px">Intensidad</p>
-        <input type="range" min="0" max="3" step="0.1" value="1.5" id="light-intensity">
-    </div>
-
-    <!-- PANEL PRINCIPAL -->
-    <div id="ui-panel">
-        <h1>LEVIPARK21 3D</h1>
-        
-        <button class="projection-toggle" id="btn-projection">👁️ Perspectiva</button>
-        <div class="views-container">
-            <button class="btn-view" id="view-iso">📦 Iso</button>
-            <button class="btn-view" id="view-top">📐 Planta</button>
-            <button class="btn-view" id="view-front">📏 Alzado</button>
-        </div>
-
-        <h2>Catálogo</h2>
-        <select id="line-select" class="line-selector"></select>
-        <div id="dynamic-catalog"></div>
-
-        <div id="budget-box">0 €</div>
-        <button id="btn-reset" style="margin-top:20px; width:100%; padding:10px; background:#444; color:#ccc; border:none; border-radius:6px; cursor:pointer;">❌ Borrar Todo</button>
-    </div>
-
-    <!-- PANEL EDICIÓN -->
-    <div id="edit-panel">
-        <h1>Editar</h1>
-        <button id="btn-lock" class="status-btn">🔓 Fijar</button>
-        <button id="btn-collision" class="status-btn edit-control">💥 Colisión: ON</button>
-
-        <h2>Rotación</h2>
-        <div class="control-row">
-            <span style="color:#4cd137; font-weight:bold;">Y</span>
-            <button class="btn-mini edit-control" id="rot-y-n">⟲</button>
-            <button class="btn-mini edit-control" id="rot-y-p">⟳</button>
-        </div>
-        <div class="control-row">
-            <span style="color:#e84118; font-weight:bold;">X</span>
-            <button class="btn-mini edit-control" id="rot-x-n">▼</button>
-            <button class="btn-mini edit-control" id="rot-x-p">▲</button>
-        </div>
-        <!-- AQUÍ ESTÁ LA ROTACIÓN Z RESTAURADA -->
-        <div class="control-row">
-            <span style="color:#0097e6; font-weight:bold;">Z</span>
-            <button class="btn-mini edit-control" id="rot-z-n">◀</button>
-            <button class="btn-mini edit-control" id="rot-z-p">▶</button>
-        </div>
-        <button class="btn-action edit-control" id="reset-rot">↺ Reset</button>
-
-        <h2>Posición</h2>
-        <div class="control-row">
-            <button class="btn-mini edit-control" id="move-down">⬇</button>
-            <button class="btn-mini edit-control" id="move-up">⬆</button>
-        </div>
-        <button class="btn-action edit-control" id="reset-height">⭱ Suelo</button>
-        <button class="btn-action btn-delete edit-control" id="btn-delete">🗑️ Eliminar</button>
-    </div>
-
-    <script type="module">
+<script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        // 🔥 AR: Importamos el botón de Realidad Aumentada
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
 
         // ======================================================================
-        // 1. TU BASE DE DATOS
+        // BASE DE DATOS (IGUAL QUE ANTES)
         // ======================================================================
         const productsDB = {
             "Línea Clásica": {
@@ -204,18 +50,24 @@
         let selectionBox; 
         const loader = new GLTFLoader();
 
+        // 🔥 AR: Grupo contenedor para mover todo el parque junto en AR si hace falta
+        let parkGroup; 
+
         init();
         initCatalog(); 
         setupEventListeners(); 
-        animate();
-
+        // 🔥 AR: Ya no llamamos a animate() aquí directamente, lo hace el renderer
+    
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            
+            // 🔥 AR: Crear un grupo contenedor. Pondremos los objetos AQUÍ, no directamente en scene
+            parkGroup = new THREE.Group();
+            scene.add(parkGroup);
 
-            perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-            perspectiveCamera.position.set(15, 15, 15);
+            perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            perspectiveCamera.position.set(10, 10, 10); // Un poco más cerca para AR
 
             const aspect = window.innerWidth / window.innerHeight;
             const d = 20; 
@@ -229,24 +81,37 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
             renderer.outputColorSpace = THREE.SRGBColorSpace; 
+            
+            // 🔥 AR: Habilitar WebXR
+            renderer.xr.enabled = true; 
             document.body.appendChild(renderer.domElement);
+
+            // 🔥 AR: Añadir botón de AR con soporte para que la UI se vea encima (domOverlay)
+            const arButton = ARButton.createButton(renderer, { 
+                requiredFeatures: ['hit-test'], 
+                optionalFeatures: ['dom-overlay'], 
+                domOverlay: { root: document.body } 
+            });
+            document.body.appendChild(arButton);
 
             hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
             scene.add(hemiLight);
 
             dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.castShadow = true;
+            dirLight.position.set(10, 20, 10); // Ajustado para mejor sombra en AR
             dirLight.shadow.mapSize.width = 2048;
             dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
-            updateSunPosition();
-
+            
+            // 🔥 AR: El suelo para escritorio (verde). 
+            // En AR, idealmente deberíamos hacerlo transparente pero que reciba sombras.
             const geometry = new THREE.PlaneGeometry(100, 100);
             const material = new THREE.MeshStandardMaterial({ color: 0x55aa55, roughness: 0.8 });
             plane = new THREE.Mesh(geometry, material);
             plane.rotation.x = -Math.PI / 2;
             plane.receiveShadow = true;
-            scene.add(plane);
+            scene.add(plane); // El plano base sigue en la escena raíz para referencias
 
             gridHelper = new THREE.GridHelper(100, 100, 0xffffff, 0xcccccc);
             scene.add(gridHelper);
@@ -262,8 +127,12 @@
             pointer = new THREE.Vector2();
             
             window.addEventListener('resize', onWindowResize);
+
+            // 🔥 AR: Iniciar el bucle de renderizado compatible con XR
+            renderer.setAnimationLoop(render);
         }
 
+        // --- (Toda la parte de initCatalog y renderCategories es IGUAL) ---
         function initCatalog() {
             const select = document.getElementById('line-select');
             select.innerHTML = "";
@@ -309,11 +178,13 @@
         }
 
         function setupEventListeners() {
+            // Eventos de puntero
             window.addEventListener('pointerdown', onPointerDown);
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('pointerup', onPointerUp);
             window.addEventListener('keydown', onKeyDown);
 
+            // --- (Resto de listeners IGUALES) ---
             document.getElementById('btn-toggle-env').addEventListener('click', () => {
                 const p = document.getElementById('env-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
             });
@@ -335,16 +206,12 @@
             document.getElementById('btn-lock').addEventListener('click', toggleLock);
             document.getElementById('btn-collision').addEventListener('click', toggleObjectCollision);
             
-            // BOTONES DE ROTACIÓN Y POSICIÓN
             document.getElementById('rot-y-n').addEventListener('click', () => rotateSelected('y', -45));
             document.getElementById('rot-y-p').addEventListener('click', () => rotateSelected('y', 45));
             document.getElementById('rot-x-n').addEventListener('click', () => rotateSelected('x', -15));
             document.getElementById('rot-x-p').addEventListener('click', () => rotateSelected('x', 15));
-            
-            // --- NUEVOS LISTENERS PARA Z ---
             document.getElementById('rot-z-n').addEventListener('click', () => rotateSelected('z', -15));
             document.getElementById('rot-z-p').addEventListener('click', () => rotateSelected('z', 15));
-            // -----------------------------
             
             document.getElementById('reset-rot').addEventListener('click', resetRotation);
             document.getElementById('move-down').addEventListener('click', () => moveVertical(-0.1));
@@ -359,10 +226,15 @@
             else if (type === 'sunset') { color=0xff9966; fogColor=0xff9966; groundColor=0x6b4f3b; dirLight.color.setHex(0xffaa00); }
             else if (type === 'night') { color=0x111111; fogColor=0x111111; groundColor=0x223322; dirLight.color.setHex(0xaaccff); }
             else if (type === 'white') { color=0xffffff; fogColor=0xffffff; groundColor=0xffffff; dirLight.color.setHex(0xffffff); showGrid=false; }
-            scene.background = new THREE.Color(color); scene.fog.color.setHex(fogColor);
+            scene.background = new THREE.Color(color); 
+            // 🔥 AR: En AR queremos el fondo transparente para ver la cámara
+            if(renderer.xr.isPresenting) scene.background = null;
+
+            scene.fog.color.setHex(fogColor);
             plane.material.color.setHex(groundColor); gridHelper.visible = showGrid;
         }
 
+        // --- (Funciones de Sol IGUALES) ---
         function updateSun(val, type) {
             if (type === 'azimuth') sunAzimuth = val; if (type === 'elevation') sunElevation = val;
             updateSunPosition();
@@ -380,8 +252,11 @@
 
         function onPointerDown(event) {
             if (event.target.closest('#ui-panel') || event.target.closest('#edit-panel') || event.target.closest('#env-panel')) return;
+            
+            // Lógica normal de escritorio
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(pointer, activeCamera); 
+            
             if (productToPlace) {
                 const intersects = raycaster.intersectObject(plane);
                 if (intersects.length > 0) placeObject(intersects[0].point);
@@ -406,9 +281,15 @@
             loader.load(productToPlace, (gltf) => {
                 const model = gltf.scene;
                 model.traverse(n => { if(n.isMesh) { n.castShadow=true; n.receiveShadow=true; } });
+                
+                // Si estamos en AR, quizás la escala sea diferente, pero asumimos 1:1 por ahora
                 model.position.set(pos.x, 0, pos.z);
                 model.userData = { price: productPrice, locked: false, collides: true };
-                scene.add(model); objectsInScene.push(model); totalPrice += productPrice; updateBudget();
+                
+                // 🔥 AR: Añadimos a parkGroup en lugar de scene directamente si queremos agrupar
+                // Pero tu lógica actual usa arrays, así que mantendremos scene para no romper selección
+                scene.add(model); 
+                objectsInScene.push(model); totalPrice += productPrice; updateBudget();
                 selectObject(model); document.getElementById('loading').style.display = 'none';
                 productToPlace = null; document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active'));
             }, undefined, (err) => { console.error(err); alert("Error cargando modelo"); document.getElementById('loading').style.display = 'none'; });
@@ -434,6 +315,7 @@
             }
         }
 
+        // --- (Funciones de Selección, UI y Colisión IGUALES) ---
         function selectObject(obj) {
             selectedObject = obj; selectionBox.setFromObject(obj); selectionBox.visible = true;
             document.getElementById('edit-panel').style.display = 'block'; updateUI();
@@ -491,7 +373,21 @@
             orthoCamera.left = -20 * aspect; orthoCamera.right = 20 * aspect; orthoCamera.top = 20; orthoCamera.bottom = -20; orthoCamera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, activeCamera); }
+        
+        // 🔥 AR: Bucle de animación nuevo para WebXR
+        function render() {
+            // Cuando estamos en AR, el background debe ser nulo para ver la cámara
+            if (renderer.xr.isPresenting) {
+                scene.background = null;
+                gridHelper.visible = false; // Ocultamos la rejilla en AR si molesta
+                plane.visible = false;      // Ocultamos el suelo verde en AR
+            } else {
+                // Restaurar visibilidad al salir de AR
+                gridHelper.visible = true;
+                plane.visible = true;
+            }
+
+            controls.update();
+            renderer.render(scene, activeCamera);
+        }
     </script>
-</body>
-</html>
