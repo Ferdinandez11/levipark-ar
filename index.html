@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Levipark AR - Visualizador v16</title>
+    <title>Levipark AR - v19 Full Views</title>
     <style>
         /* ESTILOS GENERALES */
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; background: #222; }
@@ -17,7 +17,6 @@
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            /* Transición suave para aparecer/desaparecer */
             transition: opacity 0.3s, transform 0.3s;
         }
 
@@ -25,10 +24,10 @@
         #ui-panel { 
             position: absolute; top: 20px; left: 20px; width: 280px; 
             max-height: 70vh; overflow-y: auto; z-index: 10; 
-            display: none; /* OCULTO POR DEFECTO EN MÓVIL/AR */
+            display: none; 
         }
         
-        /* BOTÓN FLOTANTE MENÚ (NUEVO) */
+        /* BOTÓN FLOTANTE MENÚ */
         #btn-toggle-menu {
             position: absolute; top: 20px; left: 20px; 
             background: #4a90e2; color: white; border: 1px solid #fff;
@@ -68,8 +67,27 @@
         h2 { font-size: 12px; margin: 10px 0 5px 0; color: #aaa; text-transform: uppercase; }
         button { font-family: inherit; transition: all 0.2s; outline: none; }
         
-        .views-container { display: flex; gap: 5px; margin-bottom: 10px; }
-        .btn-view { flex: 1; padding: 6px; font-size: 10px; cursor: pointer; background: #333; border: 1px solid #555; color: #ddd; border-radius: 4px; }
+        /* GRID DE VISTAS (NUEVO DISEÑO) */
+        .views-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 5px; 
+            margin-bottom: 10px; 
+        }
+        .btn-view { 
+            padding: 8px; font-size: 11px; cursor: pointer; 
+            background: #333; border: 1px solid #555; color: #ddd; border-radius: 4px; 
+        }
+        
+        /* BOTÓN MEDIR DESTACADO */
+        #btn-measure { 
+            width: 100%; margin-bottom: 15px; padding: 10px; 
+            background: #e67e22; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+        #btn-measure.active-measure { 
+            background: #d35400; border: 2px solid white; box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+        }
+
         .projection-toggle { width: 100%; margin-bottom: 10px; padding: 8px; cursor: pointer; background: #4a90e2; color: white; border: none; border-radius: 6px; font-size: 12px; }
         
         /* PANEL EDICIÓN */
@@ -96,15 +114,19 @@
         #btn-lock { background: #555; } #btn-lock.is-locked { background: #d9534f; }
         #btn-collision { background: #28a745; } #btn-collision.is-inactive { background: #555; }
         
-        /* HEADER EDICIÓN */
         .panel-header-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; padding: 0 5px; }
         .panel-header-btn:hover { color: white; }
 
         #budget-box { margin-top: 15px; border-top: 1px solid #555; padding-top: 10px; font-size: 20px; font-weight: bold; color: #4cd137; text-align: right; }
         #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; }
+        
+        /* NUEVOS BOTONES DE COLOR */
         .bg-options { display: flex; gap: 5px; margin-bottom: 10px; }
         .bg-btn { flex: 1; height: 30px; border-radius: 4px; border: 1px solid #555; cursor: pointer; }
-        .bg-day { background: #87CEEB; } .bg-sunset { background: linear-gradient(to bottom, #fd7e14, #4a148c); } .bg-night { background: #1a1a1a; } .bg-white { background: #ffffff; border: 2px solid #ccc; }
+        .bg-white { background: #ffffff; }
+        .bg-green { background: #2ecc71; }
+        .bg-blue { background: #3498db; }
+        .bg-yellow { background: #f1c40f; }
 
         /* --- RESPONSIVE PARA MÓVIL --- */
         @media (max-width: 600px) {
@@ -112,7 +134,7 @@
             #edit-panel { top: 75px; right: 10px; width: 180px; }
             #btn-toggle-menu { width: 40px; height: 40px; font-size: 18px; top: 15px; left: 15px; }
             #btn-toggle-env { width: 40px; height: 40px; font-size: 18px; bottom: 15px; left: 15px; }
-            .btn-mini { padding: 10px; } /* Botones más fáciles de tocar */
+            .btn-mini { padding: 10px; } 
         }
     </style>
     
@@ -129,24 +151,26 @@
 
     <div id="loading">📦 Cargando...</div>
     
-    <!-- BOTÓN MENÚ PRINCIPAL (NUEVO) -->
+    <!-- BOTÓN MENÚ PRINCIPAL -->
     <div id="btn-toggle-menu">☰</div>
     <!-- BOTÓN AMBIENTE -->
     <div id="btn-toggle-env">☀</div> 
 
     <!-- AMBIENTE -->
     <div id="env-panel">
-        <h1>Ambiente</h1>
+        <h1>Fondo</h1>
         <div class="bg-options">
-            <button class="bg-btn bg-day" id="bg-day"></button>
-            <button class="bg-btn bg-sunset" id="bg-sunset"></button>
-            <button class="bg-btn bg-night" id="bg-night"></button>
-            <button class="bg-btn bg-white" id="bg-white"></button>
+            <button class="bg-btn bg-white" id="bg-white" title="Blanco"></button>
+            <button class="bg-btn bg-green" id="bg-green" title="Verde"></button>
+            <button class="bg-btn bg-blue" id="bg-blue" title="Azul"></button>
+            <button class="bg-btn bg-yellow" id="bg-yellow" title="Amarillo"></button>
         </div>
-        <p style="font-size:11px; margin-bottom:5px">Sol (Rot/Alt)</p>
+        
+        <p style="font-size:11px; margin-bottom:5px; margin-top:15px">Posición Sol</p>
         <input type="range" min="0" max="360" value="45" id="sun-azimuth">
         <input type="range" min="0" max="90" value="45" id="sun-elevation">
-        <p style="font-size:11px; margin-bottom:5px">Intensidad</p>
+        
+        <p style="font-size:11px; margin-bottom:5px">Intensidad Luz</p>
         <input type="range" min="0" max="3" step="0.1" value="1.5" id="light-intensity">
     </div>
 
@@ -155,11 +179,17 @@
         <h1>LEVIPARK AR <button class="panel-header-btn" id="btn-close-menu">×</button></h1>
         
         <button class="projection-toggle" id="btn-projection">👁️ Perspectiva</button>
-        <div class="views-container">
+        
+        <!-- GRID DE VISTAS 2x2 -->
+        <div class="views-grid">
             <button class="btn-view" id="view-iso">📦 Iso</button>
             <button class="btn-view" id="view-top">📐 Planta</button>
             <button class="btn-view" id="view-front">📏 Alzado</button>
+            <button class="btn-view" id="view-side">🥴 Perfil</button>
         </div>
+        
+        <!-- BOTÓN MEDIR DESTACADO -->
+        <button id="btn-measure">📏 Herramienta Medir</button>
 
         <h2>Catálogo</h2>
         <select id="line-select" class="line-selector"></select>
@@ -205,14 +235,21 @@
         </div>
     </div>
 
-    <!-- SCRIPT PRINCIPAL -->
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { ARButton } from 'three/addons/webxr/ARButton.js';
 
-        // --- BD PRODUCTOS ---
+        // CONFIGURACIÓN DE COLORES
+        const ENV_COLORS = {
+            white: 0xffffff,
+            green: 0x2ecc71,
+            blue: 0x3498db,
+            yellow: 0xf1c40f
+        };
+        let currentEnvColor = ENV_COLORS.white;
+
         const productsDB = {
             "Línea Clásica": {
                 "Torres": [
@@ -241,7 +278,7 @@
 
         let scene, renderer, controls;
         let perspectiveCamera, orthoCamera, activeCamera; 
-        let plane, raycaster, pointer, gridHelper;
+        let plane, raycaster, pointer; 
         let dirLight, hemiLight;
         let sunAzimuth = 45, sunElevation = 45;
 
@@ -250,6 +287,13 @@
         let totalPrice = 0;
         let dragStartPosition = new THREE.Vector3(); 
         let isColliding = false; 
+
+        // VARIABLES PARA MEDICIÓN
+        let isMeasuring = false;
+        let measurePoints = [];
+        let measureMarkers = [];
+        let measureLine = null;
+        let measureLabel = null;
 
         const objectsInScene = []; 
         let selectionBox; 
@@ -261,8 +305,6 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
 
             perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             perspectiveCamera.position.set(10, 10, 10);
@@ -299,15 +341,12 @@
             dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
 
-            const geometry = new THREE.PlaneGeometry(100, 100);
-            const material = new THREE.MeshStandardMaterial({ color: 0x55aa55, roughness: 0.8 });
+            const geometry = new THREE.PlaneGeometry(200, 200);
+            const material = new THREE.MeshStandardMaterial({ color: ENV_COLORS.white, roughness: 1 });
             plane = new THREE.Mesh(geometry, material);
             plane.rotation.x = -Math.PI / 2;
             plane.receiveShadow = true;
             scene.add(plane);
-
-            gridHelper = new THREE.GridHelper(100, 100, 0xffffff, 0xcccccc);
-            scene.add(gridHelper);
 
             selectionBox = new THREE.BoxHelper(undefined, 0xffff00);
             scene.add(selectionBox);
@@ -320,6 +359,9 @@
             pointer = new THREE.Vector2();
             
             window.addEventListener('resize', onWindowResize);
+            
+            setEnvironmentColor(ENV_COLORS.white);
+
             renderer.setAnimationLoop(render);
         }
 
@@ -357,7 +399,6 @@
                         btn.innerHTML = `${prod.name} <span style="float:right; opacity:0.7">${prod.price}€</span>`;
                         btn.addEventListener('click', function() { 
                             prepareToPlace(prod.file, prod.price, this);
-                            // Opcional: Cerrar menú en móvil tras seleccionar
                             if(window.innerWidth < 600) document.getElementById('ui-panel').style.display = 'none';
                         });
                         panel.appendChild(btn);
@@ -377,12 +418,11 @@
             window.addEventListener('pointerup', onPointerUp);
             window.addEventListener('keydown', onKeyDown);
 
-            // Toggle Panel Menú Principal
+            // Menú Toggle
             const uiPanel = document.getElementById('ui-panel');
             const btnMenu = document.getElementById('btn-toggle-menu');
             const btnCloseMenu = document.getElementById('btn-close-menu');
             
-            // Función para alternar el menú
             const toggleMenu = () => {
                 if(uiPanel.style.display === 'block') { uiPanel.style.display = 'none'; } 
                 else { uiPanel.style.display = 'block'; }
@@ -390,26 +430,21 @@
             btnMenu.addEventListener('click', toggleMenu);
             btnCloseMenu.addEventListener('click', () => uiPanel.style.display = 'none');
 
-            // Toggle Panel Ambiente
             document.getElementById('btn-toggle-env').addEventListener('click', () => {
                 const p = document.getElementById('env-panel'); 
                 p.style.display = p.style.display === 'block' ? 'none' : 'block';
             });
 
-            // Toggle Minimizar Panel Editar
             document.getElementById('btn-min-edit').addEventListener('click', () => {
                 const content = document.getElementById('edit-content');
-                if(content.style.display === 'none') {
-                    content.style.display = 'block';
-                } else {
-                    content.style.display = 'none';
-                }
+                if(content.style.display === 'none') content.style.display = 'block';
+                else content.style.display = 'none';
             });
 
-            document.getElementById('bg-day').addEventListener('click', () => setSky('day'));
-            document.getElementById('bg-sunset').addEventListener('click', () => setSky('sunset'));
-            document.getElementById('bg-night').addEventListener('click', () => setSky('night'));
-            document.getElementById('bg-white').addEventListener('click', () => setSky('white'));
+            document.getElementById('bg-white').addEventListener('click', () => setEnvironmentColor(ENV_COLORS.white));
+            document.getElementById('bg-green').addEventListener('click', () => setEnvironmentColor(ENV_COLORS.green));
+            document.getElementById('bg-blue').addEventListener('click', () => setEnvironmentColor(ENV_COLORS.blue));
+            document.getElementById('bg-yellow').addEventListener('click', () => setEnvironmentColor(ENV_COLORS.yellow));
             
             document.getElementById('sun-azimuth').addEventListener('input', (e) => updateSun(e.target.value, 'azimuth'));
             document.getElementById('sun-elevation').addEventListener('input', (e) => updateSun(e.target.value, 'elevation'));
@@ -419,8 +454,12 @@
             document.getElementById('view-iso').addEventListener('click', () => setView('iso'));
             document.getElementById('view-top').addEventListener('click', () => setView('top'));
             document.getElementById('view-front').addEventListener('click', () => setView('front'));
-            document.getElementById('btn-reset').addEventListener('click', resetScene);
+            document.getElementById('view-side').addEventListener('click', () => setView('side'));
+            
+            // BOTÓN MEDIR
+            document.getElementById('btn-measure').addEventListener('click', toggleMeasureMode);
 
+            document.getElementById('btn-reset').addEventListener('click', resetScene);
             document.getElementById('btn-lock').addEventListener('click', toggleLock);
             document.getElementById('btn-collision').addEventListener('click', toggleObjectCollision);
             
@@ -438,16 +477,14 @@
             document.getElementById('btn-delete').addEventListener('click', deleteSelected);
         }
 
-        function setSky(type) {
-            let color, fogColor, groundColor, showGrid = true;
-            if (type === 'day') { color=0x87CEEB; fogColor=0x87CEEB; groundColor=0x55aa55; dirLight.color.setHex(0xffffff); }
-            else if (type === 'sunset') { color=0xff9966; fogColor=0xff9966; groundColor=0x6b4f3b; dirLight.color.setHex(0xffaa00); }
-            else if (type === 'night') { color=0x111111; fogColor=0x111111; groundColor=0x223322; dirLight.color.setHex(0xaaccff); }
-            else if (type === 'white') { color=0xffffff; fogColor=0xffffff; groundColor=0xffffff; dirLight.color.setHex(0xffffff); showGrid=false; }
-            scene.background = new THREE.Color(color); 
-            if(renderer.xr.isPresenting) scene.background = null;
-            scene.fog.color.setHex(fogColor);
-            plane.material.color.setHex(groundColor); gridHelper.visible = showGrid;
+        function setEnvironmentColor(colorHex) {
+            currentEnvColor = colorHex;
+            const color = new THREE.Color(colorHex);
+            if (!renderer.xr.isPresenting) {
+                scene.background = color;
+                scene.fog = new THREE.Fog(colorHex, 20, 100); 
+                if(plane) plane.material.color.setHex(colorHex); 
+            }
         }
 
         function updateSun(val, type) {
@@ -460,22 +497,138 @@
         }
 
         function prepareToPlace(file, price, btn) {
+            if(isMeasuring) toggleMeasureMode(); // Desactivar medir si vamos a colocar
             if (productToPlace === file) { productToPlace = null; document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active')); return; }
             deselectObject(); productToPlace = file; productPrice = price;
             document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active')); btn.classList.add('active');
         }
+
+        // --- LÓGICA DE MEDICIÓN ---
+        function toggleMeasureMode() {
+            isMeasuring = !isMeasuring;
+            const btn = document.getElementById('btn-measure');
+            
+            if(isMeasuring) {
+                btn.classList.add('active-measure');
+                btn.innerText = "📏 Click Punto A";
+                deselectObject();
+                productToPlace = null;
+                document.querySelectorAll('.btn-product').forEach(b => b.classList.remove('active'));
+            } else {
+                btn.classList.remove('active-measure');
+                btn.innerText = "📏 Herramienta Medir";
+                clearMeasurements();
+            }
+        }
+
+        function clearMeasurements() {
+            measurePoints = [];
+            measureMarkers.forEach(m => scene.remove(m));
+            measureMarkers = [];
+            if(measureLine) { scene.remove(measureLine); measureLine = null; }
+            if(measureLabel) { scene.remove(measureLabel); measureLabel = null; }
+        }
+
+        function createMeasureMarker(pos) {
+            const geo = new THREE.SphereGeometry(0.15, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xe67e22, depthTest: false, depthWrite: false });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(pos);
+            mesh.renderOrder = 999; 
+            scene.add(mesh);
+            measureMarkers.push(mesh);
+        }
+
+        function updateMeasureLine(finalPos) {
+            if(measurePoints.length < 1) return;
+            const start = measurePoints[0];
+            const end = finalPos;
+
+            if(measureLine) scene.remove(measureLine);
+
+            const points = [start, end];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 3, depthTest: false });
+            measureLine = new THREE.Line(geometry, material);
+            measureLine.renderOrder = 998;
+            scene.add(measureLine);
+
+            // Calcular Distancia
+            const dist = start.distanceTo(end).toFixed(2);
+            const btn = document.getElementById('btn-measure');
+            if(isMeasuring && measurePoints.length === 1) btn.innerText = `📏 ${dist} m`;
+
+            // Crear etiqueta si terminamos
+            if(measurePoints.length === 2) {
+                createMeasureLabel(dist + " m", start.clone().lerp(end, 0.5).add(new THREE.Vector3(0, 0.3, 0)));
+                btn.innerText = "📏 Terminar";
+            }
+        }
+
+        function createMeasureLabel(text, pos) {
+            if(measureLabel) scene.remove(measureLabel);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 128;
+            
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.roundRect(10, 10, 236, 108, 20);
+            ctx.fill();
+            
+            ctx.font = "bold 60px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, 128, 64);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+            measureLabel = new THREE.Sprite(mat);
+            measureLabel.position.copy(pos);
+            measureLabel.scale.set(2, 1, 1);
+            measureLabel.renderOrder = 999;
+            scene.add(measureLabel);
+        }
+
+        // --- POINTER EVENTS ---
 
         function onPointerDown(event) {
             if (event.target.closest('#ui-panel') || event.target.closest('#edit-panel') || event.target.closest('#env-panel') || event.target.closest('#btn-toggle-menu')) return;
             
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(pointer, activeCamera); 
+
+            // Lógica MEDIR
+            if(isMeasuring) {
+                const intersects = raycaster.intersectObjects([...objectsInScene, plane], true);
+                if(intersects.length > 0) {
+                    const point = intersects[0].point;
+                    
+                    if(measurePoints.length === 2) {
+                        clearMeasurements(); // Reiniciar si ya había 2
+                    }
+
+                    measurePoints.push(point);
+                    createMeasureMarker(point);
+
+                    if(measurePoints.length === 1) {
+                        document.getElementById('btn-measure').innerText = "📏 Click Punto B";
+                    } else if (measurePoints.length === 2) {
+                        updateMeasureLine(point);
+                    }
+                }
+                return;
+            }
             
+            // Lógica COLOCAR PRODUCTO
             if (productToPlace) {
                 const intersects = raycaster.intersectObject(plane);
                 if (intersects.length > 0) placeObject(intersects[0].point);
                 return;
             }
+
+            // Lógica SELECCIONAR
             const intersectsObjects = raycaster.intersectObjects(objectsInScene, true);
             if (intersectsObjects.length > 0) {
                 let selected = intersectsObjects[0].object;
@@ -490,6 +643,38 @@
             } else { deselectObject(); }
         }
 
+        function onPointerMove(event) {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, activeCamera); 
+            
+            // Preview Medición
+            if(isMeasuring && measurePoints.length === 1) {
+                const intersects = raycaster.intersectObjects([...objectsInScene, plane], true);
+                if(intersects.length > 0) {
+                    updateMeasureLine(intersects[0].point);
+                }
+            }
+
+            if (isDragging && selectedObject && !selectedObject.userData.locked) {
+                const intersects = raycaster.intersectObject(plane);
+                if (intersects.length > 0) {
+                    selectedObject.position.x = intersects[0].point.x; selectedObject.position.z = intersects[0].point.z;
+                    selectionBox.update(); checkCollisions();
+                }
+            }
+        }
+
+        function onPointerUp() {
+            if (isDragging) {
+                if (isColliding && selectedObject.userData.collides) {
+                    selectedObject.position.copy(dragStartPosition); selectionBox.update(); isColliding = false; checkCollisions();
+                }
+                isDragging = false; controls.enabled = true; document.body.style.cursor = 'default';
+            }
+        }
+
+        // --- RESTO DE FUNCIONES ---
+        
         function placeObject(pos) {
             document.getElementById('loading').style.display = 'block';
             loader.load(productToPlace, (gltf) => {
@@ -507,30 +692,9 @@
             });
         }
 
-        function onPointerMove(event) {
-            pointer.x = (event.clientX / window.innerWidth) * 2 - 1; pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(pointer, activeCamera); 
-            if (isDragging && selectedObject && !selectedObject.userData.locked) {
-                const intersects = raycaster.intersectObject(plane);
-                if (intersects.length > 0) {
-                    selectedObject.position.x = intersects[0].point.x; selectedObject.position.z = intersects[0].point.z;
-                    selectionBox.update(); checkCollisions();
-                }
-            }
-        }
-        function onPointerUp() {
-            if (isDragging) {
-                if (isColliding && selectedObject.userData.collides) {
-                    selectedObject.position.copy(dragStartPosition); selectionBox.update(); isColliding = false; checkCollisions();
-                }
-                isDragging = false; controls.enabled = true; document.body.style.cursor = 'default';
-            }
-        }
-
         function selectObject(obj) {
             selectedObject = obj; selectionBox.setFromObject(obj); selectionBox.visible = true;
             document.getElementById('edit-panel').style.display = 'block'; 
-            // Asegurar que el contenido del panel es visible al seleccionar nuevo objeto
             document.getElementById('edit-content').style.display = 'block';
             updateUI();
         }
@@ -568,19 +732,25 @@
             scene.remove(selectedObject); objectsInScene.splice(objectsInScene.indexOf(selectedObject), 1);
             totalPrice -= selectedObject.userData.price; updateBudget(); deselectObject();
         }
-        function resetScene() { objectsInScene.forEach(o => scene.remove(o)); objectsInScene.length=0; totalPrice=0; updateBudget(); deselectObject(); }
+        function resetScene() { objectsInScene.forEach(o => scene.remove(o)); objectsInScene.length=0; totalPrice=0; updateBudget(); deselectObject(); clearMeasurements(); }
         function updateBudget() { document.getElementById('budget-box').innerText = totalPrice.toLocaleString('es-ES') + " €"; }
+        
         function toggleProjection() {
             const btn = document.getElementById('btn-projection'); const prevPos = activeCamera.position.clone(); const prevTarget = controls.target.clone();
             if (activeCamera === perspectiveCamera) { activeCamera = orthoCamera; btn.innerText = "📐 Ortográfica"; btn.style.background = "#555"; } 
             else { activeCamera = perspectiveCamera; btn.innerText = "👁️ Perspectiva"; btn.style.background = "#4a90e2"; }
             activeCamera.position.copy(prevPos); activeCamera.lookAt(prevTarget); controls.object = activeCamera; controls.update();
         }
+
         function setView(type) {
             controls.target.set(0,0,0);
-            if(type==='iso') activeCamera.position.set(15,15,15); if(type==='top') activeCamera.position.set(0,20,0); if(type==='front') activeCamera.position.set(0,0,20);
+            if(type==='iso') activeCamera.position.set(15,15,15); 
+            if(type==='top') activeCamera.position.set(0,20,0); 
+            if(type==='front') activeCamera.position.set(0,0,20); // Alzado
+            if(type==='side') activeCamera.position.set(20,0,0);  // Perfil
             activeCamera.lookAt(0,0,0); controls.update();
         }
+
         function onKeyDown(e) { if(e.key === 'Delete') deleteSelected(); }
         function onWindowResize() {
             const aspect = window.innerWidth / window.innerHeight; perspectiveCamera.aspect = aspect; perspectiveCamera.updateProjectionMatrix();
@@ -591,12 +761,12 @@
         function render() {
             if (renderer.xr.isPresenting) {
                 scene.background = null; 
-                gridHelper.visible = false;
-                plane.visible = false;
+                plane.visible = false; 
             } else {
-                if (!scene.background) setSky('day'); 
-                gridHelper.visible = true;
-                plane.visible = true;
+                if (!scene.background) {
+                    scene.background = new THREE.Color(currentEnvColor);
+                    plane.visible = true;
+                }
             }
             controls.update();
             renderer.render(scene, activeCamera);
@@ -604,3 +774,4 @@
     </script>
 </body>
 </html>
+
